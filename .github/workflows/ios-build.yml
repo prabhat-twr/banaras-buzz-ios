@@ -1,0 +1,73 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show selected Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iOS Simulator (no signing needed)
+        run: |
+          xcodebuild \
+            -project BanarasBuzz.xcodeproj \
+            -scheme BanarasBuzz \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Release \
+            -derivedDataPath build-sim \
+            clean build
+
+      - name: Build unsigned device archive
+        run: |
+          xcodebuild \
+            -project BanarasBuzz.xcodeproj \
+            -scheme BanarasBuzz \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -derivedDataPath build-device \
+            clean build
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="build-device/Build/Products/Release-iphoneos/BanarasBuzz.app"
+          if [ -d "$APP_PATH" ]; then
+            mkdir -p Payload
+            cp -r "$APP_PATH" Payload/
+            zip -r BanarasBuzz-unsigned.ipa Payload
+            echo "Packaged $(du -h BanarasBuzz-unsigned.ipa | cut -f1) IPA"
+          else
+            echo "No .app product found at $APP_PATH — device build likely failed, see the previous step's log."
+            exit 1
+          fi
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: BanarasBuzz-unsigned-ipa
+          path: BanarasBuzz-unsigned.ipa
+          if-no-files-found: warn
+
+      - name: Upload simulator app (for local Simulator testing)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BanarasBuzz-simulator-app
+          path: build-sim/Build/Products/Release-iphonesimulator/BanarasBuzz.app
+          if-no-files-found: warn
