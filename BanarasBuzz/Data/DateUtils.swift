@@ -13,6 +13,35 @@ func toHindiDigits(_ s: String) -> String {
 
 let istTimeZone = TimeZone(identifier: "Asia/Kolkata")!
 
+private let monthAbbrEN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+private let monthNamesHI = [
+    "जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर",
+]
+
+/// Masthead dateline (e.g. "Tue 25 Aug 2026" / "मंगल २५ अगस्त २०२६"), computed from the live
+/// clock pinned to IST — ported alongside the Android fix for the same bug: this used to be a
+/// hardcoded string in Strings.swift that went stale after every release. `wd` is the caller's
+/// per-language weekday-abbreviation list (Strings.wd), ordered Mon..Sun.
+func formatDateline(lang: Lang, wd: [String], now: Date = Date()) -> String {
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = istTimeZone
+    let comps = cal.dateComponents([.year, .month, .day, .weekday], from: now)
+    // Calendar's .weekday is 1=Sunday..7=Saturday; wd is ordered Mon..Sun, so remap to a 0-based
+    // Mon..Sun index.
+    let weekdayIndex = ((comps.weekday ?? 1) + 5) % 7
+    let weekday = wd.indices.contains(weekdayIndex) ? wd[weekdayIndex] : ""
+    let day = comps.day ?? 1
+    let month = comps.month ?? 1
+    let year = comps.year ?? 0
+    if lang == .hi {
+        let monthName = monthNamesHI.indices.contains(month - 1) ? monthNamesHI[month - 1] : ""
+        return "\(weekday) \(toHindiDigits(String(day))) \(monthName) \(toHindiDigits(String(year)))"
+    } else {
+        let monthName = monthAbbrEN.indices.contains(month - 1) ? monthAbbrEN[month - 1] : ""
+        return "\(weekday) \(day) \(monthName) \(year)"
+    }
+}
+
 /// Today's date in IST, used to build the Events tab's rolling 7-day strip.
 func todayIst() -> Date {
     var cal = Calendar(identifier: .gregorian)

@@ -16,7 +16,8 @@ struct RootView: View {
             } else {
                 VStack(spacing: 0) {
                     Masthead(
-                        dateline: s.dateline, title: s.masthead, lang: state.lang,
+                        dateline: formatDateline(lang: state.lang, wd: s.wd, now: state.nowMillis),
+                        title: s.masthead, lang: state.lang,
                         hasUnread: MOCK_ALERTS.contains { $0.unread && !state.isRead($0.id) },
                         onToggleLang: { state.toggleLang() },
                         onOpenAlerts: { state.go(.alerts) }

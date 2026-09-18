@@ -2,7 +2,6 @@
 import Foundation
 
 struct Strings {
-    let dateline: String
     let masthead: String
     let nextAarti: String
     let close: String
@@ -57,7 +56,7 @@ struct Strings {
 }
 
 let StringsEN = Strings(
-    dateline: "Tue 25 Aug 2026", masthead: "Banaras Buzz", nextAarti: "Next Ganga Aarti", close: "Close",
+    masthead: "Banaras Buzz", nextAarti: "Next Ganga Aarti", close: "Close",
     eventsTitle: "Events", eventsSub: "AUG 2026 · 34 LISTED THIS WEEK", noEvents: "Nothing listed yet for this day.",
     aartiTitle: "Aarti & Darshan", aartiSub: "TIMINGS UPDATED 06:10 TODAY", darshan: "Darshan status",
     ghatsTitle: "Ghats", ghatsSub: "84 GHATS · 6 KM RIVERFRONT", mapSlot: "map: riverfront strip",
@@ -80,7 +79,7 @@ let StringsEN = Strings(
 )
 
 let StringsHI = Strings(
-    dateline: "मंगल २५ अगस्त २०२६", masthead: "बनारस बज़", nextAarti: "अगली गंगा आरती", close: "बंद करें",
+    masthead: "बनारस बज़", nextAarti: "अगली गंगा आरती", close: "बंद करें",
     eventsTitle: "आयोजन", eventsSub: "अगस्त २०२६ · इस सप्ताह ३४ आयोजन", noEvents: "इस दिन के लिए अभी कुछ दर्ज नहीं है।",
     aartiTitle: "आरती व दर्शन", aartiSub: "समय आज ०६:१० पर अद्यतन", darshan: "दर्शन स्थिति",
     ghatsTitle: "घाट", ghatsSub: "८४ घाट · ६ किमी तट", mapSlot: "नक्शा: तट पट्टी",
