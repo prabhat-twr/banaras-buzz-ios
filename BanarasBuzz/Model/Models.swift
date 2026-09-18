@@ -159,3 +159,17 @@ struct Observance: Identifiable, Hashable {
     let paksha: String
     let description: String
 }
+
+enum ChatRole { case user, bot }
+
+/// One turn in the Kashi Assistant chat (see Data/KashiAssistant.swift) — a lightweight
+/// rule-based helper that answers Varanasi questions from the app's own live data, not a
+/// hosted LLM.
+struct ChatMessage: Identifiable, Hashable {
+    let id: String
+    let role: ChatRole
+    let text: String
+
+    static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}

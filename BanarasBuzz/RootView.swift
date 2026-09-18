@@ -14,44 +14,60 @@ struct RootView: View {
             if let sourcePage = state.sourcePage {
                 SourceWebPage(sourcePage: sourcePage, lang: state.lang) { state.sourcePage = nil }
             } else {
-                VStack(spacing: 0) {
-                    Masthead(
-                        dateline: formatDateline(lang: state.lang, wd: s.wd, now: state.nowMillis),
-                        title: s.masthead, lang: state.lang,
-                        hasUnread: MOCK_ALERTS.contains { $0.unread && !state.isRead($0.id) },
-                        onToggleLang: { state.toggleLang() },
-                        onOpenAlerts: { state.go(.alerts) }
-                    )
-                    .padding(.top, 8)
+                ZStack(alignment: .bottomTrailing) {
+                    VStack(spacing: 0) {
+                        Masthead(
+                            dateline: formatDateline(lang: state.lang, wd: s.wd, now: state.nowMillis),
+                            title: s.masthead, lang: state.lang,
+                            hasUnread: MOCK_ALERTS.contains { $0.unread && !state.isRead($0.id) },
+                            onToggleLang: { state.toggleLang() },
+                            onOpenAlerts: { state.go(.alerts) }
+                        )
+                        .padding(.top, 8)
 
-                    ZStack(alignment: .bottom) {
-                        Group {
-                            switch state.screen {
-                            case .buzz: BuzzScreen(state: state)
-                            case .events: EventsScreen(state: state)
-                            case .ghats: GhatsScreen(state: state)
-                            case .bazaar: BazaarScreen(state: state)
-                            case .alerts: AlertsScreen(state: state)
+                        ZStack(alignment: .bottom) {
+                            Group {
+                                switch state.screen {
+                                case .buzz: BuzzScreen(state: state)
+                                case .events: EventsScreen(state: state)
+                                case .ghats: GhatsScreen(state: state)
+                                case .bazaar: BazaarScreen(state: state)
+                                case .alerts: AlertsScreen(state: state)
+                                }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                            ToastHost(message: state.toast)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 14)
+                                .animation(.easeInOut, value: state.toast)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                        ToastHost(message: state.toast)
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 14)
-                            .animation(.easeInOut, value: state.toast)
+                        BottomTabBar(
+                            tabs: s.tabs.enumerated().map { i, label in (label, state.screen == TAB_SCREENS[i]) },
+                            onSelect: { i in state.go(TAB_SCREENS[i]) }
+                        )
                     }
+                    .background(BBColors.paper.ignoresSafeArea())
 
-                    BottomTabBar(
-                        tabs: s.tabs.enumerated().map { i, label in (label, state.screen == TAB_SCREENS[i]) },
-                        onSelect: { i in state.go(TAB_SCREENS[i]) }
-                    )
+                    // Kashi Assistant entry point — floating above every tab, sits just clear
+                    // of the bottom tab bar. Opens the chat sheet below.
+                    Button(action: { state.chatOpen = true }) {
+                        ChatGlyph(color: BBColors.inkOnDark, size: 21)
+                            .frame(width: 52, height: 52)
+                            .background(BBColors.vermillion)
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 96)
                 }
-                .background(BBColors.paper.ignoresSafeArea())
             }
         }
         .sheet(item: $state.sheet) { sheet in
             DetailSheetView(sheet: sheet, closeLabel: s.close) { state.sheet = nil }
+        }
+        .sheet(isPresented: $state.chatOpen) {
+            KashiChatSheet(state: state)
         }
         .task {
             state.articlesLoading = true

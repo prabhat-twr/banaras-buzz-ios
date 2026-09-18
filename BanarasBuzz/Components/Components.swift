@@ -89,6 +89,36 @@ struct BellGlyph: View {
     }
 }
 
+/// A small speech-bubble outline for the Kashi Assistant chat entry point.
+struct ChatGlyph: View {
+    let color: Color
+    var size: CGFloat = 20
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let bodyH = geo.size.height * 0.74
+            let r = w * 0.22
+            Path { p in
+                p.move(to: CGPoint(x: r, y: 0))
+                p.addLine(to: CGPoint(x: w - r, y: 0))
+                p.addQuadCurve(to: CGPoint(x: w, y: r), control: CGPoint(x: w, y: 0))
+                p.addLine(to: CGPoint(x: w, y: bodyH - r))
+                p.addQuadCurve(to: CGPoint(x: w - r, y: bodyH), control: CGPoint(x: w, y: bodyH))
+                p.addLine(to: CGPoint(x: w * 0.4, y: bodyH))
+                p.addLine(to: CGPoint(x: w * 0.24, y: geo.size.height))
+                p.addLine(to: CGPoint(x: w * 0.3, y: bodyH))
+                p.addLine(to: CGPoint(x: r, y: bodyH))
+                p.addQuadCurve(to: CGPoint(x: 0, y: bodyH - r), control: CGPoint(x: 0, y: bodyH))
+                p.addLine(to: CGPoint(x: 0, y: r))
+                p.addQuadCurve(to: CGPoint(x: r, y: 0), control: CGPoint(x: 0, y: 0))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 struct ThumbSlot: View {
     var size: CGFloat
     var body: some View {

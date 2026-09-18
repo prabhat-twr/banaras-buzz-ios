@@ -24,6 +24,19 @@ jobs:
           sudo xcode-select -s "$LATEST_XCODE"
           xcodebuild -version
 
+      - name: Generate placeholder Secrets.swift
+        # The real Secrets.swift (Gemini API key, used by the optional AI chat path) is
+        # gitignored and lives only on the developer's own machine, since this repo is public.
+        # CI needs *some* file at that path to compile against, so it writes an empty-key stub
+        # here — the app just falls back to its offline rule-based assistant in this build.
+        run: |
+          mkdir -p BanarasBuzz/Config
+          cat > BanarasBuzz/Config/Secrets.swift << 'EOF'
+          enum Secrets {
+              static let geminiAPIKey: String = ""
+          }
+          EOF
+
       - name: Install XcodeGen
         run: brew install xcodegen
 

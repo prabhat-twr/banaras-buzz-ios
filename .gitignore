@@ -8,3 +8,7 @@ Payload/
 *.ipa
 xcuserdata/
 .swiftpm/
+
+# Real Gemini API key for local testing — see BanarasBuzz/Config/Secrets.example.swift.
+# Never commit the real key: this repo is public.
+BanarasBuzz/Config/Secrets.swift

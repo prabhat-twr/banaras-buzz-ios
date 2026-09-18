@@ -40,6 +40,13 @@ final class AppState: ObservableObject {
 
     @Published var nowMillis: Date = Date()
 
+    // Kashi Assistant chat sheet — a small rule-based helper (see Data/KashiAssistant.swift),
+    // not a hosted LLM. Messages persist for the life of the app process so reopening the
+    // sheet keeps the conversation, matching how the other sheets/tabs keep their state.
+    @Published var chatOpen: Bool = false
+    @Published var chatMessages: [ChatMessage] = []
+    @Published var chatThinking: Bool = false
+
     func toggleLang() {
         lang = lang == .en ? .hi : .en
     }
