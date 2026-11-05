@@ -4,12 +4,20 @@ options:
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.5.0"
+    CURRENT_PROJECT_VERSION: "8"
 targets:
   BanarasBuzz:
     type: application
     platform: iOS
     sources:
       - path: BanarasBuzz
+      - path: Shared
+    dependencies:
+      - target: BanarasBuzzWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mpt.vnsnews.ios
@@ -26,6 +34,8 @@ targets:
       path: BanarasBuzz/Resources/Info.plist
       properties:
         CFBundleDisplayName: Banaras Buzz
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -35,11 +45,45 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
+        # Widgets and panchang notifications open the app at banarasbuzz://panchang.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.mpt.vnsnews.ios
+            CFBundleURLSchemes:
+              - banarasbuzz
+
+  # "आज का पंचांग" home-screen and lock-screen widget.
+  BanarasBuzzWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BanarasBuzzWidget
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mpt.vnsnews.ios.widget
+        INFOPLIST_FILE: BanarasBuzzWidget/Info.plist
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        DEVELOPMENT_TEAM: ""
+    info:
+      path: BanarasBuzzWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Banaras Buzz
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 schemes:
   BanarasBuzz:
     build:
       targets:
         BanarasBuzz: all
+        BanarasBuzzWidget: all
     run:
       config: Debug
     archive:

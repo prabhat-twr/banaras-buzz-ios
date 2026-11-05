@@ -1,108 +1,148 @@
-// Ported from the Android app's ui/BanarasBuzzApp.kt — the app shell: masthead, active
-// screen, bottom tab bar, toast host, and the shared detail sheet.
+// App shell: the redesigned five-tab app (Home, News, Panchang, Explore, More), matching the
+// Android app. The Kashi Assistant chat keeps its own AppState and opens as a sheet from
+// Explore and More.
 import SwiftUI
 
-private let TAB_SCREENS: [Screen] = [.buzz, .events, .ghats, .bazaar]
-
 struct RootView: View {
-    @StateObject private var state = AppState()
+    @StateObject private var state = AppState() // Kashi Assistant chat
+    @StateObject private var store = BuzzStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        let s = strings(for: state.lang)
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                screen
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                BuzzTabBar(store: store)
+            }
+            .background(BZ.cream.ignoresSafeArea())
 
-        Group {
-            if let sourcePage = state.sourcePage {
-                SourceWebPage(sourcePage: sourcePage, lang: state.lang) { state.sourcePage = nil }
-            } else {
-                ZStack(alignment: .bottomTrailing) {
-                    VStack(spacing: 0) {
-                        Masthead(
-                            dateline: formatDateline(lang: state.lang, wd: s.wd, now: state.nowMillis),
-                            title: s.masthead, lang: state.lang,
-                            hasUnread: MOCK_ALERTS.contains { $0.unread && !state.isRead($0.id) },
-                            onToggleLang: { state.toggleLang() },
-                            onOpenAlerts: { state.go(.alerts) }
-                        )
-                        .padding(.top, 8)
-
-                        ZStack(alignment: .bottom) {
-                            Group {
-                                switch state.screen {
-                                case .buzz: BuzzScreen(state: state)
-                                case .events: EventsScreen(state: state)
-                                case .ghats: GhatsScreen(state: state)
-                                case .bazaar: BazaarScreen(state: state)
-                                case .alerts: AlertsScreen(state: state)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                            ToastHost(message: state.toast)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 14)
-                                .animation(.easeInOut, value: state.toast)
-                        }
-
-                        BottomTabBar(
-                            tabs: s.tabs.enumerated().map { i, label in (label, state.screen == TAB_SCREENS[i]) },
-                            onSelect: { i in state.go(TAB_SCREENS[i]) }
-                        )
-                    }
-                    .background(BBColors.paper.ignoresSafeArea())
-
-                    // Kashi Assistant entry point — floating above every tab, sits just clear
-                    // of the bottom tab bar. Opens the chat sheet below.
-                    Button(action: { state.chatOpen = true }) {
-                        ChatGlyph(color: BBColors.inkOnDark, size: 21)
-                            .frame(width: 52, height: 52)
-                            .background(BBColors.vermillion)
-                            .clipShape(Circle())
-                    }
-                    .padding(.trailing, 18)
-                    .padding(.bottom, 96)
-                }
+            if !store.loaded && store.loading {
+                ProgressView().tint(BZ.saffron).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            if let message = store.toast {
+                Text(message)
+                    .font(.system(size: 14, weight: .medium)).foregroundColor(.white)
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    .background(BZ.ink.opacity(0.92)).clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.bottom, 92)
+                    .transition(.opacity)
             }
         }
-        .sheet(item: $state.sheet) { sheet in
-            DetailSheetView(sheet: sheet, closeLabel: s.close) { state.sheet = nil }
-        }
-        .sheet(isPresented: $state.chatOpen) {
-            KashiChatSheet(state: state)
-        }
+        .animation(.easeInOut(duration: 0.2), value: store.toast)
+        .preferredColorScheme(.light)
+        .sheet(isPresented: $state.chatOpen) { KashiChatSheet(state: state) }
+        .task { await store.refresh() }
+        // Data for the Kashi Assistant's answers.
         .task {
-            state.articlesLoading = true
-            state.articles = await fetchNewsArticles()
-            state.articlesLoading = false
-        }
-        .task {
-            state.liveEventsLoading = true
-            state.liveEvents = await fetchLiveEvents()
-            state.liveEventsLoading = false
-        }
-        .task {
-            state.panchangLoading = true
             state.panchang = await fetchTodayPanchang()
             state.panchangLoading = false
         }
         .task {
-            state.observancesLoading = true
             state.upcomingObservances = await fetchUpcomingObservances()
             state.observancesLoading = false
         }
-        .onChange(of: state.toast) { newValue in
-            guard newValue != nil else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
-                state.toast = nil
+        .task {
+            state.liveEvents = await fetchLiveEvents()
+            state.liveEventsLoading = false
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active { store.refreshIfStale() }
+        }
+        .onOpenURL { url in open(url) }
+        .onAppear {
+            NotificationRouter.shared.openPanchang = { openPanchang() }
+            PanchangAlerts.reschedule(store: nil)
+            // Launch arguments used by CI to screenshot a given screen: -screenshotRoute year
+            let args = UserDefaults.standard
+            if let r = args.string(forKey: "screenshotRoute"),
+               let u = URL(string: "banarasbuzz://\(r)" + (args.string(forKey: "screenshotDate").map { "?date=\($0)" } ?? "")) {
+                open(u)
             }
         }
-        .onChange(of: state.mapQuery) { newValue in
-            guard let q = newValue else { return }
-            openMap(query: q)
-            state.mapQuery = nil
+    }
+
+    /// banarasbuzz://<screen>, e.g. banarasbuzz://panchang?date=2026-11-08 (widgets, notifications).
+    private func open(_ url: URL) {
+        let routes: [String: Route2] = [
+            "home": .home, "news": .news, "panchang": .panchang, "explore": .explore, "more": .more,
+            "events": .events, "business": .business, "community": .community, "year": .year,
+        ]
+        guard let host = url.host, let route = routes[host] else { return }
+        if route == .panchang {
+            let date = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "date" }?.value
+            store.selectedDate = date
+        }
+        store.go(route)
+    }
+
+    private func openPanchang() {
+        store.selectedDate = nil
+        store.go(.panchang)
+    }
+
+    @ViewBuilder
+    private var screen: some View {
+        switch store.route {
+        case .home: HomeScreen(store: store)
+        case .news: NewsScreen(store: store)
+        case .panchang: PanchangScreen(store: store)
+        case .explore: ExploreScreen(store: store, openChat: { state.chatOpen = true })
+        case .more: MoreScreen(store: store, openChat: { state.chatOpen = true })
+        case .events: EventsScreen2(store: store)
+        case .business: BusinessScreen(store: store)
+        case .community: CommunityScreen(store: store)
+        case .year: YearScreen(store: store)
         }
     }
 }
 
-extension SheetContent: Identifiable {
-    var id: String { title }
+private struct BuzzTabBar: View {
+    @ObservedObject var store: BuzzStore
+
+    private let tabs: [(Route2, String, String)] = [
+        (.home, "Home", "house.fill"),
+        (.news, "News", "newspaper.fill"),
+        (.panchang, "Panchang", "calendar"),
+        (.explore, "Explore", "safari.fill"),
+        (.more, "More", "square.grid.2x2.fill"),
+    ]
+
+    private var activeTab: Route2 {
+        switch store.route {
+        case .events, .business, .community: return .explore
+        case .year: return .panchang
+        default: return store.route
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(tabs, id: \.0) { tab in
+                let route = tab.0, label = tab.1, icon = tab.2
+                let on = activeTab == route
+                Button {
+                    if route == .panchang { store.selectedDate = nil }
+                    store.go(route)
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(width: 52, height: 28)
+                            .background(on ? BZ.tile : .clear)
+                            .clipShape(Capsule())
+                        Text(label).font(.system(size: 11, weight: on ? .bold : .medium))
+                    }
+                    .foregroundColor(on ? BZ.saffron : BZ.muted)
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .background(Color.white.ignoresSafeArea(edges: .bottom))
+        .overlay(Rectangle().fill(BZ.line).frame(height: 1), alignment: .top)
+    }
 }

@@ -2,7 +2,8 @@ name: iOS Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, "claude/**"]
+  pull_request:
   workflow_dispatch: {}
 
 jobs:
@@ -53,6 +54,37 @@ jobs:
             -configuration Release \
             -derivedDataPath build-sim \
             clean build
+
+      - name: Screenshots in the iPhone simulator
+        # Launches the simulator build and captures each screen via banarasbuzz:// links, so the
+        # UI can be checked without a Mac. Never fails the build.
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
+          echo "Simulator $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build-sim/Build/Products/Release-iphonesimulator/BanarasBuzz.app
+          mkdir -p screenshots
+          shot() { # shot <file> <launch args...>
+            name=$1; shift
+            xcrun simctl launch --terminate-running-process "$UDID" com.mpt.vnsnews.ios "$@"
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
+          }
+          for r in home news panchang year events business explore community more; do
+            shot "$r" -screenshotRoute "$r"
+          done
+          shot panchang-diwali -screenshotRoute panchang -screenshotDate 2026-11-08
+          ls -la screenshots
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: BanarasBuzz-screenshots
+          path: screenshots
+          if-no-files-found: warn
 
       - name: Build unsigned device archive
         run: |
