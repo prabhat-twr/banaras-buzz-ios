@@ -65,15 +65,17 @@ jobs:
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" build-sim/Build/Products/Release-iphonesimulator/BanarasBuzz.app
-          xcrun simctl launch "$UDID" com.mpt.vnsnews.ios
-          sleep 15
           mkdir -p screenshots
-          for r in home news panchang "panchang?date=2026-11-08" year events business explore community more; do
-            name=$(echo "$r" | tr '?=' '__')
-            xcrun simctl openurl "$UDID" "banarasbuzz://$r"
-            sleep 6
+          shot() { # shot <file> <launch args...>
+            name=$1; shift
+            xcrun simctl launch --terminate-running-process "$UDID" com.mpt.vnsnews.ios "$@"
+            sleep 12
             xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
+          }
+          for r in home news panchang year events business explore community more; do
+            shot "$r" -screenshotRoute "$r"
           done
+          shot panchang-diwali -screenshotRoute panchang -screenshotDate 2026-11-08
           ls -la screenshots
 
       - name: Upload screenshots

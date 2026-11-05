@@ -53,6 +53,12 @@ struct RootView: View {
         .onAppear {
             NotificationRouter.shared.openPanchang = { openPanchang() }
             PanchangAlerts.reschedule(store: nil)
+            // Launch arguments used by CI to screenshot a given screen: -screenshotRoute year
+            let args = UserDefaults.standard
+            if let r = args.string(forKey: "screenshotRoute"),
+               let u = URL(string: "banarasbuzz://\(r)" + (args.string(forKey: "screenshotDate").map { "?date=\($0)" } ?? "")) {
+                open(u)
+            }
         }
     }
 
