@@ -59,6 +59,7 @@ jobs:
         # Launches the simulator build and captures each screen via banarasbuzz:// links, so the
         # UI can be checked without a Mac. Never fails the build.
         continue-on-error: true
+        timeout-minutes: 12
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
           echo "Simulator $UDID"
