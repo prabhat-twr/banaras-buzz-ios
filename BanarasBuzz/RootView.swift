@@ -49,13 +49,25 @@ struct RootView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .active { store.refreshIfStale() }
         }
-        .onOpenURL { url in
-            if url.host == "panchang" { openPanchang() }
-        }
+        .onOpenURL { url in open(url) }
         .onAppear {
             NotificationRouter.shared.openPanchang = { openPanchang() }
             PanchangAlerts.reschedule(store: nil)
         }
+    }
+
+    /// banarasbuzz://<screen>, e.g. banarasbuzz://panchang?date=2026-11-08 (widgets, notifications).
+    private func open(_ url: URL) {
+        let routes: [String: Route2] = [
+            "home": .home, "news": .news, "panchang": .panchang, "explore": .explore, "more": .more,
+            "events": .events, "business": .business, "community": .community, "year": .year,
+        ]
+        guard let host = url.host, let route = routes[host] else { return }
+        if route == .panchang {
+            let date = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "date" }?.value
+            store.selectedDate = date
+        }
+        store.go(route)
     }
 
     private func openPanchang() {

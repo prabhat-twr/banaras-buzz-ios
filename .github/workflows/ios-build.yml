@@ -55,6 +55,34 @@ jobs:
             -derivedDataPath build-sim \
             clean build
 
+      - name: Screenshots in the iPhone simulator
+        # Launches the simulator build and captures each screen via banarasbuzz:// links, so the
+        # UI can be checked without a Mac. Never fails the build.
+        continue-on-error: true
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
+          echo "Simulator $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build-sim/Build/Products/Release-iphonesimulator/BanarasBuzz.app
+          xcrun simctl launch "$UDID" com.mpt.vnsnews.ios
+          sleep 15
+          mkdir -p screenshots
+          for r in home news panchang "panchang?date=2026-11-08" year events business explore community more; do
+            name=$(echo "$r" | tr '?=' '__')
+            xcrun simctl openurl "$UDID" "banarasbuzz://$r"
+            sleep 6
+            xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
+          done
+          ls -la screenshots
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: BanarasBuzz-screenshots
+          path: screenshots
+          if-no-files-found: warn
+
       - name: Build unsigned device archive
         run: |
           xcodebuild \
