@@ -81,14 +81,28 @@ struct RootView: View {
         store.go(.panchang)
     }
 
+    /// Opens the Kashi Assistant chat, or says it's coming soon while Features.assistant is off.
+    private func openChat() {
+        if Features.assistant { state.chatOpen = true } else { store.say("काशी असिस्टेंट जल्द आ रहा है") }
+    }
+
     @ViewBuilder
     private var screen: some View {
+        if !Features.isLive(store.route) {
+            ComingSoonView(route: store.route, store: store)
+        } else {
+            liveScreen
+        }
+    }
+
+    @ViewBuilder
+    private var liveScreen: some View {
         switch store.route {
         case .home: HomeScreen(store: store)
         case .news: NewsScreen(store: store)
         case .panchang: PanchangScreen(store: store)
-        case .explore: ExploreScreen(store: store, openChat: { state.chatOpen = true })
-        case .more: MoreScreen(store: store, openChat: { state.chatOpen = true })
+        case .explore: ExploreScreen(store: store, openChat: openChat)
+        case .more: MoreScreen(store: store, openChat: openChat)
         case .events: EventsScreen2(store: store)
         case .business: BusinessScreen(store: store)
         case .community: CommunityScreen(store: store)
