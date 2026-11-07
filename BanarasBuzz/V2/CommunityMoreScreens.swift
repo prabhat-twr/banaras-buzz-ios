@@ -131,7 +131,8 @@ struct MoreScreen: View {
                 VStack(spacing: 0) {
                     MoreRow(icon: "location.fill", title: "My City Settings", subtitle: "आपका शहर: \(store.cityName)") { showCity = true }
                     MoreRow(icon: "bell.fill", title: "Notifications & Widgets", subtitle: "राहुकाल और शुभ मुहूर्त अलर्ट") { showAlerts = true }
-                    MoreRow(icon: "bubble.left.and.bubble.right.fill", title: "Kashi Assistant", subtitle: "बनारस के बारे में पूछें", action: openChat)
+                    MoreRow(icon: "bubble.left.and.bubble.right.fill", title: "Kashi Assistant",
+                            subtitle: Features.assistant ? "बनारस के बारे में पूछें" : "जल्द आ रहा है", action: openChat)
                     MoreRow(icon: "arrow.clockwise", title: "Refresh", subtitle: store.loading ? "अपडेट हो रहा है…" : "ताज़ा खबरें और पंचांग लाएँ") {
                         Task { await store.refresh(); store.say("अपडेट हो गया") }
                     }

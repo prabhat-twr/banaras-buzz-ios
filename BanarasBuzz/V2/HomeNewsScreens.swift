@@ -41,8 +41,8 @@ struct HomeScreen: View {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                     QuickTile(emoji: "📰", title: "आज की\n5 बड़ी खबरें", subtitle: "Local News") { store.go(.news) }
                     QuickTile(emoji: "🌞", title: "आज का पंचांग", subtitle: "Tithi, Nakshatra") { store.selectedDate = nil; store.go(.panchang) }
-                    QuickTile(emoji: "📅", title: "आज बनारस में", subtitle: "Events & More") { store.go(.events) }
-                    QuickTile(emoji: "🏪", title: "लोकल बिजनेस", subtitle: "Shops & Markets") { store.go(.business) }
+                    QuickTile(emoji: "📅", title: "आज बनारस में", subtitle: "Events & More", soon: !Features.events) { store.go(.events) }
+                    QuickTile(emoji: "🏪", title: "लोकल बिजनेस", subtitle: "Shops & Markets", soon: !Features.business) { store.go(.business) }
                 }
                 .padding(.horizontal, 16)
 
@@ -51,7 +51,11 @@ struct HomeScreen: View {
                         Text("📍").font(.system(size: 22))
                         VStack(alignment: .leading, spacing: 1) {
                             Text("My Banaras").font(.system(size: 16, weight: .bold)).foregroundColor(BZ.ink)
-                            Text("Stories • Photos • City pulse").font(.system(size: 13)).foregroundColor(BZ.muted)
+                            if Features.community {
+                                Text("Stories • Photos • City pulse").font(.system(size: 13)).foregroundColor(BZ.muted)
+                            } else {
+                                SoonBadge().padding(.top, 2)
+                            }
                         }
                         Spacer()
                         Image(systemName: "chevron.right").foregroundColor(BZ.saffron)
@@ -110,13 +114,18 @@ private struct QuickTile: View {
     let emoji: String
     let title: String
     let subtitle: String
+    var soon = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Text(emoji).font(.system(size: 30))
                 Text(title).font(.system(size: 16, weight: .bold)).foregroundColor(BZ.ink).multilineTextAlignment(.center)
-                Text(subtitle).font(.system(size: 12.5)).foregroundColor(BZ.saffronDeep)
+                if soon {
+                    SoonBadge().padding(.top, 2)
+                } else {
+                    Text(subtitle).font(.system(size: 12.5)).foregroundColor(BZ.saffronDeep)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 128)
             .background(BZ.tile)
